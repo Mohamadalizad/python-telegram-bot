@@ -24,7 +24,23 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"{update.message.text}")
+    # TODO: add the name to the database or whatever
+    await update.message.reply_text("now please enter your email")
+    return EMAIL
+
+async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # TODO: add the email to the database
+    await update.message.reply_text("now please enter your password")
+    return PASS
+
+async def get_pass(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # TODO: add the password to the database
+    await update.message.reply_text("thank you, your form is completed")
+
+    # TODO: show the submitted data
+    # await update.message.reply_text(f"{}")
+
+    return ConversationHandler.END
   
 def main():
     print("bot is running")
@@ -34,11 +50,14 @@ def main():
     app.add_handlers([
         CommandHandler("start", start),
         # CommandHandler("register", register),
-        ConversationHandler(entry_points=[CommandHandler("register", register)],
+        ConversationHandler(
+            entry_points=[CommandHandler("register", register)],
             states={
-                NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+                NAME: [MessageHandler(filters.TEXT & (~filters.COMMAND), get_name)],
+                EMAIL: [MessageHandler(filters.TEXT & (~filters.COMMAND), get_email)],
+                PASS: [MessageHandler(filters.TEXT, (~filters.COMMAND), get_pass)]
             },
-        fallbacks=[CommandHandler("cancel", cancel)],
+            fallbacks=[CommandHandler("cancel", cancel)],
         )
     ])
 
