@@ -1,8 +1,10 @@
 from decouple import config
 from telegram import Update
-from telegram.ext import Application , CommandHandler, ContextTypes , MessageHandler, filters
+from telegram.ext import Application , CommandHandler, ContextTypes , ConversationHandler, filters, MessageHandler
 
 API_TOKEN = config("API_TOKEN")
+
+NAME, EMAIL, PASS = range(3)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
@@ -13,11 +15,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Test"
+        text="welcome to the registration proccess, please tell me your name:",
     )
-    # username
-    # email
-    # pass
+    return NAME
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.effective_message.reply_text("registration canceled")
+    return ConversationHandler.END
+
+async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"{update.message.text}")
   
 def main():
     print("bot is running")
@@ -26,7 +33,13 @@ def main():
 
     app.add_handlers([
         CommandHandler("start", start),
-        CommandHandler("register", register)
+        # CommandHandler("register", register),
+        ConversationHandler(entry_points=[CommandHandler("register", register)],
+            states={
+                NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            },
+        fallbacks=[CommandHandler("cancel", cancel)],
+        )
     ])
 
     print("bot is polling")
