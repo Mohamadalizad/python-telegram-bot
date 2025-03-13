@@ -55,7 +55,7 @@ def main():
             states={
                 NAME: [MessageHandler(filters.TEXT & (~filters.COMMAND), get_name)],
                 EMAIL: [MessageHandler(filters.TEXT & (~filters.COMMAND), get_email)],
-                PASS: [MessageHandler(filters.TEXT, (~filters.COMMAND), get_pass)]
+                PASS: [MessageHandler(filters.TEXT & (~filters.COMMAND), get_pass)]
             },
             fallbacks=[CommandHandler("cancel", cancel)],
         )
