@@ -1,3 +1,4 @@
+import sqlite3
 from decouple import config
 from telegram import Update
 from telegram.ext import Application , CommandHandler, ContextTypes , ConversationHandler, filters, MessageHandler
@@ -6,17 +7,25 @@ API_TOKEN = config("API_TOKEN")
 
 NAME, EMAIL, PASS = range(3)
 
+conn = sqlite3.connect("users.db")
+cursor = conn.cursor()
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id INTEGER UNIQUE,
+    name TEXT,
+    email TEXT,
+    password TEXT
+)
+""")
+conn.commit()
+conn.close()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id, 
-        text="Register form",
-    )
+    await update.message.reply_text("This is a registration form")
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="welcome to the registration proccess, please tell me your name:",
-    )
+    await update.message.reply_text("welcome to the registration proccess, please tell me your name:")
     return NAME
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -24,21 +33,49 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: add the name to the database or whatever
+    user_id = update.message.from_user.id
+    name = update.message.text
+
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO users (telegram_id, name) VALUES (?, ?)", (user_id, name))
+    conn.commit()
+    conn.close()
+
     await update.message.reply_text("now please enter your email")
     return EMAIL
 
 async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: add the email to the database
+    user_id = update.message.from_user.id
+    email = update.message.text
+
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET email = ? WHERE telegram_id = ?", (email, user_id))
+    conn.commit()
+    conn.close()
+
     await update.message.reply_text("now please enter your password")
     return PASS
 
 async def get_pass(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # TODO: add the password to the database
+    user_id = update.message.from_user.id
+    password = update.message.text
+
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET password = ? WHERE telegram_id = ?", (password, user_id))
+    conn.commit()
+
     await update.message.reply_text("thank you, your form is completed")
 
-    # TODO: show the submitted data
-    # await update.message.reply_text(f"{}")
+    # design choice: we could also make a dictionary and keep the data instead of fetching from the database now
+    
+    cursor.execute("SELECT name, email FROM users WHERE telegram_id = ?", (user_id, ))
+    user = cursor.fetchone()
+    conn.close()
+
+    await update.message.reply_text(f"Submitted info:\nName: {user[0]}\nEmail: {user[1]}")
 
     return ConversationHandler.END
   
