@@ -1,8 +1,9 @@
+import bcrypt
 import sqlite3
 from decouple import config
 from telegram import Update
 from telegram.ext import Application , CommandHandler, ContextTypes , ConversationHandler, filters, MessageHandler
-import bcrypt
+from email_validator import validate_email, EmailNotValidError
 
 API_TOKEN = config("API_TOKEN")
 DATABASE_NAME = "database.db"
@@ -48,7 +49,17 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    email = update.message.text
+    email = update.message.text.strip()
+
+    # validate the email
+    try:
+        valid = validate_email(email, check_deliverability=True)
+        email = valid.email
+    except EmailNotValidError:
+        await update.message.reply_text("Your email is not valid!\n Please enter your email again")
+        return EMAIL
+
+    # TODO: send verification codes to that email
 
     conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
