@@ -2,12 +2,13 @@ import sqlite3
 from decouple import config
 from telegram import Update
 from telegram.ext import Application , CommandHandler, ContextTypes , ConversationHandler, filters, MessageHandler
+import bcrypt
 
 API_TOKEN = config("API_TOKEN")
-
+DATABASE_NAME = "database.db"
 NAME, EMAIL, PASS = range(3)
 
-conn = sqlite3.connect("users.db")
+conn = sqlite3.connect(DATABASE_NAME)
 cursor = conn.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS users(
@@ -36,7 +37,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     name = update.message.text
 
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
     cursor.execute("INSERT OR IGNORE INTO users (telegram_id, name) VALUES (?, ?)", (user_id, name))
     conn.commit()
@@ -49,7 +50,7 @@ async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     email = update.message.text
 
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
     cursor.execute("UPDATE users SET email = ? WHERE telegram_id = ?", (email, user_id))
     conn.commit()
@@ -61,10 +62,11 @@ async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def get_pass(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     password = update.message.text
+    hashed = hash_password(password)
 
-    conn = sqlite3.connect("users.db")
+    conn = sqlite3.connect(DATABASE_NAME)
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET password = ? WHERE telegram_id = ?", (password, user_id))
+    cursor.execute("UPDATE users SET password = ? WHERE telegram_id = ?", (hashed, user_id))
     conn.commit()
 
     await update.message.reply_text("thank you, your form is completed")
@@ -79,6 +81,11 @@ async def get_pass(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return ConversationHandler.END
   
+def hash_password(password: str):
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode(), salt)
+    return hashed.decode()
+
 def main():
     print("bot is running")
 
